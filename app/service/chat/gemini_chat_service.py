@@ -99,7 +99,8 @@ def _build_payload(model: str, request: GeminiRequest) -> Dict[str, Any]:
     
     payload = {
         "contents": request_dict.get("contents", []),
-        "tools": _build_tools(model, request_dict),
+        "tools": request_dict.get("tools", []),
+        #"tools": _build_tools(model, request_dict),
         "safetySettings": _get_safety_settings(model),
         "generationConfig": request_dict.get("generationConfig", {}),
         "systemInstruction": request_dict.get("systemInstruction", ""),
