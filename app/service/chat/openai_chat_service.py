@@ -51,7 +51,7 @@ def _build_tools(
             or model.endswith("-image")
             or model.endswith("-image-generation")
         )
-        and not _has_media_parts(messages)  # Use the updated check
+        and not _has_media_parts(messages)
     ):
         tool["codeExecution"] = {}
         logger.debug("Code execution tool enabled.")
@@ -83,8 +83,13 @@ def _build_tools(
             names, functions = set(), []
             for fc in function_declarations:
                 if fc.get("name") not in names:
-                    names.add(fc.get("name"))
-                    functions.append(fc)
+                    if fc.get("name")=="googleSearch":
+                        # cherry开启内置搜索时，添加googleSearch工具
+                        tool["googleSearch"] = {}
+                    else:
+                        # 其他函数，添加到functionDeclarations中
+                        names.add(fc.get("name"))
+                        functions.append(fc)
 
             tool["functionDeclarations"] = functions
 
@@ -173,7 +178,7 @@ class OpenAIChatService:
         self, original_chunk: Dict[str, Any], text: str
     ) -> Dict[str, Any]:
         """创建包含指定文本的OpenAI响应块"""
-        chunk_copy = json.loads(json.dumps(original_chunk))  # 深拷贝
+        chunk_copy = json.loads(json.dumps(original_chunk))
         if chunk_copy.get("choices") and "delta" in chunk_copy["choices"][0]:
             chunk_copy["choices"][0]["delta"]["content"] = text
         return chunk_copy
@@ -184,10 +189,8 @@ class OpenAIChatService:
         api_key: str,
     ) -> Union[Dict[str, Any], AsyncGenerator[str, None]]:
         """创建聊天完成"""
-        # 转换消息格式
         messages, instruction = self.message_converter.convert(request.messages)
 
-        # 构建请求payload
         payload = _build_payload(request, messages, instruction)
 
         if request.stream:
@@ -219,7 +222,6 @@ class OpenAIChatService:
             is_success = False
             error_log_msg = str(e)
             logger.error(f"Normal API call failed with error: {error_log_msg}")
-            # Try to parse status code from exception
             match = re.search(r"status code (\d+)", error_log_msg)
             if match:
                 status_code = int(match.group(1))
@@ -587,7 +589,6 @@ class OpenAIChatService:
                 error_code=status_code,
                 request_msg={"image_data_truncated": image_data[:1000]},
             )
-            # Re-raise the exception so the caller knows about the failure
             raise e
         finally:
             end_time = time.perf_counter()
